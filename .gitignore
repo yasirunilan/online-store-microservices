@@ -1,0 +1,51 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Build outputs
+dist/
+**/dist/
+
+# Environment files
+.env.local
+.env.aws
+*.env
+!.env.example
+
+# Turborepo
+.turbo/
+**/.turbo/
+
+# Test coverage
+coverage/
+**/coverage/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Prisma generated
+**/generated/
+
+# GraphQL generated schema
+apps/product-service/src/schema.gql
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# pnpm
+pnpm-lock.yaml
+
+# Terraform
+**/.terraform/
+*.tfstate
+*.tfstate.backup
+*.tfstate.lock.info

@@ -1,0 +1,68 @@
+name: Database Migration
+
+on:
+  workflow_dispatch:
+    inputs:
+      service:
+        description: Service to run migration for
+        required: true
+        type: choice
+        options:
+          - auth-service
+          - user-service
+          - order-service
+          - product-service
+      environment:
+        description: Target environment
+        required: true
+        type: choice
+        options:
+          - dev
+          - prod
+      command:
+        description: Prisma command to run
+        required: true
+        type: choice
+        options:
+          - migrate-deploy
+          - migrate-status
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: ${{ secrets.AWS_REGION }}
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node & pnpm
+        uses: ./.github/actions/setup-node-pnpm
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Fetch DATABASE_URL from Secrets Manager
+        run: |
+          DB_URL=$(aws secretsmanager get-secret-value \
+            --secret-id online-store/${{ inputs.environment }}/${{ inputs.service }}/database-url \
+            --query SecretString \
+            --output text)
+          echo "DATABASE_URL=${DB_URL}" >> "$GITHUB_ENV"
+
+      - name: Run Prisma ${{ inputs.command }}
+        working-directory: apps/${{ inputs.service }}
+        run: |
+          if [ "${{ inputs.command }}" = "migrate-deploy" ]; then
+            npx prisma migrate deploy
+          else
+            npx prisma migrate status
+          fi

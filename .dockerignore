@@ -1,0 +1,12 @@
+node_modules
+.git
+.github
+.turbo
+infrastructure
+*.md
+.env*
+docker-compose*.yml
+coverage
+.jest-cache
+.vscode
+.idea
