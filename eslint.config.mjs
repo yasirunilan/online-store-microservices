@@ -20,6 +20,6 @@ export default [
     },
   },
   {
-    ignores: ['**/dist/**', '**/node_modules/**', '**/.turbo/**', '**/prisma.config.ts', '**/generated/**'],
+    ignores: ['**/dist/**', '**/node_modules/**', '**/.turbo/**', '**/.next/**', '**/prisma.config.ts', '**/generated/**'],
   },
 ];
