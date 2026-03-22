@@ -126,7 +126,7 @@ describe('ProductResolver', () => {
     it('should load category via dataloader', async () => {
       (dataLoaders.categoryLoader.load as jest.Mock).mockResolvedValue(mockCategory);
 
-      const result = await resolver.category({ categoryId: 'cat-1' } as any);
+      const result = await resolver.category({ categoryId: 'cat-1' } as unknown);
 
       expect(dataLoaders.categoryLoader.load).toHaveBeenCalledWith('cat-1');
       expect(result).toEqual(mockCategory);
@@ -137,7 +137,7 @@ describe('ProductResolver', () => {
     it('should load inventory via dataloader', async () => {
       (dataLoaders.inventoryLoader.load as jest.Mock).mockResolvedValue(mockInventory);
 
-      const result = await resolver.inventory({ id: 'prod-1' } as any);
+      const result = await resolver.inventory({ id: 'prod-1' } as unknown);
 
       expect(dataLoaders.inventoryLoader.load).toHaveBeenCalledWith('prod-1');
       expect(result).toEqual(mockInventory);
@@ -146,7 +146,7 @@ describe('ProductResolver', () => {
     it('should return null when no inventory', async () => {
       (dataLoaders.inventoryLoader.load as jest.Mock).mockResolvedValue(null);
 
-      const result = await resolver.inventory({ id: 'prod-1' } as any);
+      const result = await resolver.inventory({ id: 'prod-1' } as unknown);
       expect(result).toBeNull();
     });
   });

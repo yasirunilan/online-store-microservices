@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { Inventory } from '../generated/prisma/client';
 import { UpdateInventoryInput } from './dto/update-inventory.input';
 import { InventoryRepository } from './inventory.repository';

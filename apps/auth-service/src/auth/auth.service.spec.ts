@@ -22,13 +22,12 @@ jest.mock('crypto', () => ({
   randomUUID: () => MOCK_UUID,
 }));
 
-// eslint-disable-next-line @typescript-eslint/no-var-requires
+ 
 const bcrypt = require('bcryptjs');
 
 describe('AuthService', () => {
   let service: AuthService;
   let authRepository: jest.Mocked<AuthRepository>;
-  let jwtService: jest.Mocked<JwtService>;
   let queueClient: { emit: jest.Mock };
 
   const mockUser = {
@@ -74,7 +73,6 @@ describe('AuthService', () => {
 
     service = module.get(AuthService);
     authRepository = module.get(AuthRepository);
-    jwtService = module.get(JwtService);
     queueClient = module.get('QUEUE_CLIENT');
   });
 
@@ -82,7 +80,7 @@ describe('AuthService', () => {
     it('should create user, emit event, and return tokens', async () => {
       authRepository.findUserByEmail.mockResolvedValue(null);
       authRepository.createUser.mockResolvedValue(mockUser);
-      authRepository.createRefreshToken.mockResolvedValue({} as any);
+      authRepository.createRefreshToken.mockResolvedValue({} as unknown);
 
       const result = await service.register('test@example.com', 'password123');
 
@@ -112,7 +110,7 @@ describe('AuthService', () => {
     it('should verify password and return tokens on success', async () => {
       authRepository.findUserByEmail.mockResolvedValue(mockUser);
       bcrypt.compare.mockResolvedValue(true);
-      authRepository.createRefreshToken.mockResolvedValue({} as any);
+      authRepository.createRefreshToken.mockResolvedValue({} as unknown);
 
       const result = await service.login('test@example.com', 'password123');
 
@@ -152,8 +150,8 @@ describe('AuthService', () => {
 
     it('should revoke old token and issue new pair on success', async () => {
       authRepository.findRefreshTokenByHash.mockResolvedValue(mockStoredToken);
-      authRepository.revokeRefreshToken.mockResolvedValue({} as any);
-      authRepository.createRefreshToken.mockResolvedValue({} as any);
+      authRepository.revokeRefreshToken.mockResolvedValue({} as unknown);
+      authRepository.createRefreshToken.mockResolvedValue({} as unknown);
 
       const result = await service.refresh('some-refresh-token');
 
@@ -197,7 +195,7 @@ describe('AuthService', () => {
         user: mockUser,
       };
       authRepository.findRefreshTokenByHash.mockResolvedValue(storedToken);
-      authRepository.revokeRefreshToken.mockResolvedValue({} as any);
+      authRepository.revokeRefreshToken.mockResolvedValue({} as unknown);
 
       await service.logout('some-token');
 
