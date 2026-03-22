@@ -1,7 +1,7 @@
 environment       = "dev"
 aws_region        = "us-east-1"
 project_name      = "online-store"
-github_repository = "org/online-store"
+github_repository = "yasirunilan/online-store-microservices"
 
 alb_services = [
   {
@@ -35,6 +35,12 @@ alb_services = [
 ]
 
 ecs_services = {
+  "web" = {
+    cpu           = 256
+    memory        = 512
+    desired_count = 1
+    max_count     = 2
+  }
   "auth-service" = {
     cpu           = 256
     memory        = 512

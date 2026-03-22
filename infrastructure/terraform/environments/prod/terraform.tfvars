@@ -36,6 +36,12 @@ alb_services = [
 ]
 
 ecs_services = {
+  "web" = {
+    cpu           = 512
+    memory        = 1024
+    desired_count = 2
+    max_count     = 4
+  }
   "auth-service" = {
     cpu           = 512
     memory        = 1024

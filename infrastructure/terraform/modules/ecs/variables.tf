@@ -38,6 +38,11 @@ variable "alb_target_group_arns" {
   type        = map(string)
 }
 
+variable "alb_dns_name" {
+  description = "ALB DNS name for internal service-to-service calls"
+  type        = string
+}
+
 variable "ecr_repository_urls" {
   description = "Map of service name to ECR repository URL"
   type        = map(string)

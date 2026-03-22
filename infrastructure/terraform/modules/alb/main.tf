@@ -45,6 +45,36 @@ resource "aws_lb_target_group" "services" {
 }
 
 # -----------------------------------------------------------------------------
+# Default Target Group (web frontend — catch-all)
+# -----------------------------------------------------------------------------
+
+resource "aws_lb_target_group" "default" {
+  count = var.default_target != null ? 1 : 0
+
+  name        = "${var.project_name}-${var.default_target.name}"
+  port        = var.default_target.port
+  protocol    = "HTTP"
+  vpc_id      = var.vpc_id
+  target_type = "ip"
+
+  health_check {
+    enabled             = true
+    path                = var.default_target.health_check_path
+    protocol            = "HTTP"
+    healthy_threshold   = 3
+    unhealthy_threshold = 3
+    timeout             = 5
+    interval            = 30
+    matcher             = "200"
+  }
+
+  tags = {
+    Name    = "${var.project_name}-${var.default_target.name}"
+    Service = var.default_target.name
+  }
+}
+
+# -----------------------------------------------------------------------------
 # Listeners
 # -----------------------------------------------------------------------------
 
@@ -53,8 +83,13 @@ resource "aws_lb_listener" "http" {
   port              = 80
   protocol          = "HTTP"
 
+  # When HTTPS cert exists: redirect HTTP → HTTPS
+  # When no cert + default target: forward to web frontend
+  # When no cert + no default target: 404
   default_action {
-    type = var.certificate_arn != "" ? "redirect" : "fixed-response"
+    type = var.certificate_arn != "" ? "redirect" : (
+      var.default_target != null ? "forward" : "fixed-response"
+    )
 
     dynamic "redirect" {
       for_each = var.certificate_arn != "" ? [1] : []
@@ -65,8 +100,17 @@ resource "aws_lb_listener" "http" {
       }
     }
 
+    dynamic "forward" {
+      for_each = var.certificate_arn == "" && var.default_target != null ? [1] : []
+      content {
+        target_group {
+          arn = aws_lb_target_group.default[0].arn
+        }
+      }
+    }
+
     dynamic "fixed_response" {
-      for_each = var.certificate_arn == "" ? [1] : []
+      for_each = var.certificate_arn == "" && var.default_target == null ? [1] : []
       content {
         content_type = "application/json"
         message_body = "{\"error\":\"not found\"}"
@@ -86,12 +130,24 @@ resource "aws_lb_listener" "https" {
   certificate_arn   = var.certificate_arn
 
   default_action {
-    type = "fixed-response"
+    type = var.default_target != null ? "forward" : "fixed-response"
 
-    fixed_response {
-      content_type = "application/json"
-      message_body = "{\"error\":\"not found\"}"
-      status_code  = "404"
+    dynamic "forward" {
+      for_each = var.default_target != null ? [1] : []
+      content {
+        target_group {
+          arn = aws_lb_target_group.default[0].arn
+        }
+      }
+    }
+
+    dynamic "fixed_response" {
+      for_each = var.default_target == null ? [1] : []
+      content {
+        content_type = "application/json"
+        message_body = "{\"error\":\"not found\"}"
+        status_code  = "404"
+      }
     }
   }
 }

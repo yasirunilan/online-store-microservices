@@ -60,6 +60,11 @@ module "alb" {
   security_group_id = module.vpc.alb_security_group_id
   certificate_arn   = var.certificate_arn
   services          = var.alb_services
+  default_target = {
+    name              = "web"
+    port              = 3000
+    health_check_path = "/api/health"
+  }
 }
 
 # --- ECS Cluster & Services ---
@@ -75,6 +80,7 @@ module "ecs" {
   ecs_security_group_id    = module.vpc.ecs_security_group_id
   redis_security_group_id  = module.vpc.redis_security_group_id
   alb_target_group_arns    = module.alb.target_group_arns
+  alb_dns_name             = module.alb.alb_dns_name
   ecr_repository_urls      = module.ecr.repository_urls
   database_url_secret_arns = module.rds.database_url_secret_arns
   sqs_queue_urls           = module.sqs.queue_urls

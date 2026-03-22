@@ -15,5 +15,8 @@ output "listener_arn" {
 
 output "target_group_arns" {
   description = "Map of service name to target group ARN"
-  value       = { for k, v in aws_lb_target_group.services : k => v.arn }
+  value = merge(
+    { for k, v in aws_lb_target_group.services : k => v.arn },
+    var.default_target != null ? { (var.default_target.name) = aws_lb_target_group.default[0].arn } : {}
+  )
 }

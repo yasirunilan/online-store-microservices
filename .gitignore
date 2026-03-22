@@ -42,10 +42,13 @@ npm-debug.log*
 pnpm-debug.log*
 
 # pnpm
-pnpm-lock.yaml
+pnpm-debug.log
 
 # Terraform
 **/.terraform/
 *.tfstate
 *.tfstate.backup
 *.tfstate.lock.info
+
+# web 
+**/web/.next/

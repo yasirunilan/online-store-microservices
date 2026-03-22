@@ -19,7 +19,7 @@ variable "project_name" {
 variable "service_names" {
   description = "List of all service names"
   type        = list(string)
-  default     = ["auth-service", "user-service", "product-service", "order-service", "notification-service"]
+  default     = ["web", "auth-service", "user-service", "product-service", "order-service", "notification-service"]
 }
 
 variable "certificate_arn" {

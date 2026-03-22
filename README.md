@@ -5,6 +5,7 @@ A microservices-based online store built as a learning and reference project. De
 ![Node.js](https://img.shields.io/badge/Node.js-22-339933?logo=nodedotjs)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.7-3178C6?logo=typescript)
 ![NestJS](https://img.shields.io/badge/NestJS-11-E0234E?logo=nestjs)
+![Next.js](https://img.shields.io/badge/Next.js-15-000000?logo=nextdotjs)
 ![pnpm](https://img.shields.io/badge/pnpm-10-F69220?logo=pnpm)
 ![Turborepo](https://img.shields.io/badge/Turborepo-2-EF4444?logo=turborepo)
 
@@ -12,7 +13,7 @@ A microservices-based online store built as a learning and reference project. De
 
 ## Overview
 
-Five NestJS microservices communicating over REST, GraphQL, and RabbitMQ events. Deploys to AWS ECS Fargate via Terraform. Runs fully locally with Docker Compose — no AWS account required.
+Five NestJS microservices communicating over REST, GraphQL, and RabbitMQ events, plus a **Next.js customer-facing storefront**. Deploys to AWS ECS Fargate via Terraform. Runs fully locally with Docker Compose — no AWS account required.
 
 See [ARCHITECTURE.md](ARCHITECTURE.md) for the full architecture deep-dive.
 
@@ -22,6 +23,7 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for the full architecture deep-dive.
 
 | Service | Port | API | Database | Status |
 |---|---|---|---|---|
+| `web` | 3000 | Next.js App Router | — | ✅ Complete |
 | `auth-service` | 3001 | REST + Swagger | PostgreSQL | ✅ Complete |
 | `user-service` | 3002 | REST + Swagger | PostgreSQL | ✅ Complete |
 | `product-service` | 3003 | GraphQL | PostgreSQL | ✅ Complete |
@@ -41,12 +43,43 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for the full architecture deep-dive.
 
 ---
 
+## Web App (Customer Storefront)
+
+The `web` app at `apps/web/` is a **Next.js 15 App Router** frontend that consumes all backend APIs through internal API route handlers (server-side proxy — no CORS, backend URLs hidden from the browser).
+
+| Page | Route | Description |
+|---|---|---|
+| Login | `/login` | Email + password authentication |
+| Register | `/register` | New account registration |
+| Products | `/products` | Product grid with category filter + pagination |
+| Product Detail | `/products/[id]` | Full product info, inventory, add to cart |
+| Cart | `/cart` | Cart items, quantity controls, totals |
+| Checkout | `/checkout` | Order placement (auth-guarded) |
+| Orders | `/orders` | Order history table (auth-guarded) |
+| Order Detail | `/orders/[id]` | Order line items + status badge |
+| Profile | `/profile` | Edit name, avatar (auth-guarded) |
+
+**Key architecture decisions:**
+
+| Concern | Choice | Rationale |
+|---|---|---|
+| Styling | Tailwind CSS v4 + custom shadcn/ui-style primitives | Minimal bundle, consistent design tokens |
+| State | Zustand + `persist` middleware (localStorage) | Lightweight, SSR-safe, no context boilerplate |
+| Auth | Client-side tokens in zustand store | 401 interceptor auto-refreshes tokens and retries |
+| GraphQL client | Plain `fetch` through API route proxy | Only 2-3 read queries — Apollo/urql unnecessary |
+| API proxy | Next.js Route Handlers | Solves CORS, hides backend URLs, forwards auth headers |
+
+---
+
 ## Tech Stack
 
 | Category | Technology |
 |---|---|
 | Runtime | Node.js 22, TypeScript 5.7 |
-| Framework | NestJS 11 |
+| Backend framework | NestJS 11 |
+| Frontend framework | Next.js 15 (App Router) |
+| UI | Tailwind CSS 4, custom shadcn/ui primitives, Lucide icons |
+| Client state | Zustand 5 (persist middleware + localStorage) |
 | REST API | `@nestjs/swagger` (OpenAPI auto-generated) |
 | GraphQL | `@nestjs/graphql` + Apollo Server 5 (code-first) |
 | PostgreSQL ORM | Prisma 7.5 + `@prisma/adapter-pg` |
@@ -97,12 +130,24 @@ docker compose up -d
 Each service reads `.env.local` at startup. Copy the example file for each service you want to run:
 
 ```bash
+cp apps/web/.env.example apps/web/.env.local
 cp apps/auth-service/.env.example apps/auth-service/.env.local
 cp apps/user-service/.env.example apps/user-service/.env.local
 cp apps/product-service/.env.example apps/product-service/.env.local
 cp apps/order-service/.env.example apps/order-service/.env.local
 cp apps/notification-service/.env.example apps/notification-service/.env.local
 ```
+
+**Key variables — web** (`apps/web/.env.local`):
+
+| Variable | Example | Notes |
+|---|---|---|
+| `AUTH_SERVICE_URL` | `http://localhost:3001` | Auth service base URL |
+| `USER_SERVICE_URL` | `http://localhost:3002` | User service base URL |
+| `PRODUCT_SERVICE_URL` | `http://localhost:3003` | Product service base URL (GraphQL) |
+| `ORDER_SERVICE_URL` | `http://localhost:3004` | Order service base URL |
+
+> These are server-side only (used in Next.js Route Handlers). They are never exposed to the browser.
 
 **Key variables — auth-service** (`apps/auth-service/.env.local`):
 
@@ -196,6 +241,7 @@ pnpm build
 pnpm dev
 
 # Single service
+pnpm dev --filter=@online-store/web
 pnpm dev --filter=@online-store/auth-service
 pnpm dev --filter=@online-store/user-service
 pnpm dev --filter=@online-store/product-service
@@ -345,6 +391,7 @@ Services communicate asynchronously via queue events. Publishers call `client.em
 ```
 online-store/
 ├── apps/
+│   ├── web/                    # Next.js 15 customer storefront (Tailwind + zustand)
 │   ├── auth-service/           # JWT issuer, register/login/logout/refresh
 │   ├── user-service/           # User profile CRUD, user.registered consumer
 │   ├── product-service/        # GraphQL product/category/inventory, DataLoader N+1 prevention
@@ -387,6 +434,40 @@ src/
 └── main.ts
 ```
 
+The **web** app follows Next.js App Router conventions:
+
+```
+apps/web/src/
+├── app/
+│   ├── (auth)/login/, register/   # Auth pages
+│   ├── products/, [id]/           # Product catalog
+│   ├── cart/                      # Shopping cart
+│   ├── checkout/                  # Order placement
+│   ├── orders/, [id]/             # Order history
+│   ├── profile/                   # User profile
+│   ├── api/                       # Route handlers (proxy to backend services)
+│   │   ├── auth/login,register,refresh,logout/
+│   │   ├── users/me/
+│   │   ├── graphql/
+│   │   └── orders/, [id]/
+│   ├── layout.tsx                 # Root layout (Nav + ToastProvider)
+│   └── page.tsx                   # Redirects to /products
+├── components/
+│   ├── ui/                        # Primitives (button, card, input, badge, table, etc.)
+│   ├── nav.tsx                    # Top navigation with auth + cart state
+│   ├── auth-guard.tsx             # Redirect-to-login wrapper
+│   ├── product-card.tsx           # Product grid card
+│   ├── cart-item.tsx              # Cart row with quantity controls
+│   └── order-status-badge.tsx     # Color-coded order status
+└── lib/
+    ├── api-client.ts              # Typed fetch with 401 interceptor + token refresh
+    ├── auth-store.ts              # Zustand auth state (tokens + user profile)
+    ├── cart-store.ts              # Zustand cart state (items + computed totals)
+    ├── graphql-queries.ts         # Product/category GraphQL query strings
+    ├── types.ts                   # Client-side TypeScript types
+    └── cn.ts                      # Tailwind class merge utility
+```
+
 **product-service** also contains `src/product/data-loaders.service.ts` — a REQUEST-scoped service that provides `DataLoader` instances for batching `category` and `inventory` lookups, preventing N+1 queries on nested GraphQL fields.
 
 ---
@@ -395,6 +476,7 @@ src/
 
 | Concern | Local | AWS |
 |---|---|---|
+| Frontend | `next dev` on port 3000 | ECS Fargate (ALB default route) |
 | Queue | RabbitMQ (`QUEUE_TRANSPORT=rabbitmq`) | Amazon SQS (`QUEUE_TRANSPORT=sqs`) |
 | Email | MailHog (catch-all at :8025) | Amazon SES |
 | Cache | In-memory (`CACHE_STORE=memory`) | ElastiCache Redis (`CACHE_STORE=redis`) |
@@ -403,6 +485,19 @@ src/
 | AWS SDK | LocalStack (port 4566) | Real AWS endpoints |
 | Secrets | `.env.local` files | AWS Secrets Manager |
 | Containers | Local Docker daemon | Amazon ECR + ECS Fargate |
+
+**ALB routing (production):**
+
+```
+Browser → ALB
+  ├─ /v1/auth/*, /.well-known/*  → auth-service:3001    (priority 100)
+  ├─ /v1/users/*                 → user-service:3002     (priority 200)
+  ├─ /v1/products/*, /graphql    → product-service:3003  (priority 300)
+  ├─ /v1/orders/*                → order-service:3004    (priority 400)
+  └─ /* (default)                → web:3000              (catch-all)
+```
+
+The web app's Next.js Route Handlers proxy API calls to backend services internally via the ALB DNS — no CORS needed, backend URLs stay private.
 
 **Provision with Terraform:**
 

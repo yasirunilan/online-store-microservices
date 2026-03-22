@@ -39,3 +39,13 @@ variable "services" {
     health_check_path = string
   }))
 }
+
+variable "default_target" {
+  description = "Default target (web frontend) — receives all requests that don't match a service path pattern"
+  type = object({
+    name              = string
+    port              = number
+    health_check_path = string
+  })
+  default = null
+}

@@ -24,12 +24,28 @@ locals {
     }
   ]
 
+  # Internal ALB URL for service-to-service calls (web → backend via ALB)
+  alb_url = "http://${var.alb_dns_name}"
+
   # Per-service config: which secrets and env vars each service needs
   service_configs = {
+    "web" = {
+      has_database = false
+      has_queue    = false
+      port         = 3000
+      secrets      = []
+      extra_env = [
+        { name = "AUTH_SERVICE_URL", value = local.alb_url },
+        { name = "USER_SERVICE_URL", value = local.alb_url },
+        { name = "PRODUCT_SERVICE_URL", value = local.alb_url },
+        { name = "ORDER_SERVICE_URL", value = local.alb_url },
+      ]
+    }
     "auth-service" = {
       has_database = true
       has_queue    = true
       port         = 3001
+      extra_env    = []
       secrets = [
         { name = "DATABASE_URL", valueFrom = var.database_url_secret_arns["auth-service"] },
         { name = "JWT_PRIVATE_KEY", valueFrom = aws_secretsmanager_secret.jwt_private_key.arn },
@@ -40,6 +56,7 @@ locals {
       has_database = true
       has_queue    = true
       port         = 3002
+      extra_env    = []
       secrets = [
         { name = "DATABASE_URL", valueFrom = var.database_url_secret_arns["user-service"] },
         { name = "JWT_PUBLIC_KEY", valueFrom = aws_secretsmanager_secret.jwt_public_key.arn },
@@ -49,6 +66,7 @@ locals {
       has_database = true
       has_queue    = false
       port         = 3003
+      extra_env    = []
       secrets = [
         { name = "DATABASE_URL", valueFrom = var.database_url_secret_arns["product-service"] },
         { name = "JWT_PUBLIC_KEY", valueFrom = aws_secretsmanager_secret.jwt_public_key.arn },
@@ -58,6 +76,7 @@ locals {
       has_database = true
       has_queue    = true
       port         = 3004
+      extra_env    = []
       secrets = [
         { name = "DATABASE_URL", valueFrom = var.database_url_secret_arns["order-service"] },
         { name = "JWT_PUBLIC_KEY", valueFrom = aws_secretsmanager_secret.jwt_public_key.arn },
@@ -67,6 +86,7 @@ locals {
       has_database = false
       has_queue    = true
       port         = 3005
+      extra_env    = []
       secrets = [
         { name = "MONGODB_URI", valueFrom = aws_secretsmanager_secret.mongodb_uri.arn },
       ]
@@ -103,6 +123,7 @@ resource "aws_ecs_task_definition" "services" {
           { name = "PORT", value = tostring(local.service_configs[each.key].port) },
         ],
         local.service_configs[each.key].has_queue ? concat(local.queue_env, local.queue_url_env) : [],
+        local.service_configs[each.key].extra_env,
       )
       secrets = local.service_configs[each.key].secrets
       logConfiguration = {

@@ -14,7 +14,7 @@ terraform {
 
   # Replace PLACEHOLDER with the actual S3 bucket name before running terraform init
   backend "s3" {
-    bucket = "online-store-terraform-state-PLACEHOLDER"
+    bucket = "online-store-microservices-terraform-state"
     key    = "env:/dev/terraform.tfstate"
     region = "us-east-1"
   }

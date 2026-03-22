@@ -11,9 +11,15 @@ set -euo pipefail
 cd "$CLAUDE_PROJECT_DIR"
 
 # Collect all changed files (staged + unstaged + untracked)
+# Only diff against HEAD if there are at least 2 commits; otherwise HEAD diff
+# returns every file in the repo, causing false positives on fresh repos.
 CHANGED_FILES=$(
   {
-    git diff --name-only HEAD 2>/dev/null || true
+    if [ "$(git rev-list --count HEAD 2>/dev/null || echo 0)" -gt 1 ]; then
+      git diff --name-only HEAD 2>/dev/null || true
+    else
+      git diff --name-only 2>/dev/null || true
+    fi
     git diff --cached --name-only 2>/dev/null || true
     git ls-files --others --exclude-standard 2>/dev/null || true
   } | sort -u

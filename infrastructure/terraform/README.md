@@ -38,8 +38,10 @@ Push or merge to main to trigger the `deploy.yml` workflow. This builds Docker i
 
 ## 7. Verification
 
-- `curl http://<alb-dns>/v1/auth/health` — check each service path
-- Check ECS service stability in the AWS console
+- `curl http://<alb-dns>/api/health` — web frontend health check (ALB default route)
+- `curl http://<alb-dns>/v1/auth/health` — check each backend service path
+- Open `http://<alb-dns>` in a browser — should load the storefront
+- Check ECS service stability in the AWS console (6 services: web + 5 backend)
 - Verify CloudWatch logs are flowing under `/ecs/online-store-*`
 - Send a test SQS message and verify the consumer picks it up
 - Run a full CI/CD end-to-end merge to confirm naming alignment
